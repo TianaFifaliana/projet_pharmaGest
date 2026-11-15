@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Réinitialiser mon mot de passe{% endblock %}
+{% block page_title %}Réinitialiser mon mot de passe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <p class="text-muted">
+                    Indiquez l'adresse e-mail associée à votre compte. Un lien de
+                    réinitialisation vous sera envoyé.
+                </p>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% include "utilisateurs/_formulaire.html" %}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">Envoyer le lien</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'utilisateurs:connexion' %}">Retour</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{% if activation %}Activer{% else %}Désactiver{% endif %} un compte{% endblock %}
+{% block page_title %}{% if activation %}Activer un compte{% else %}Désactiver un compte{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p>
+                    Voulez-vous vraiment {% if activation %}activer{% else %}désactiver{% endif %}
+                    le compte <strong>{{ utilisateur_a_modifier.username }}</strong>
+                    ({{ utilisateur_a_modifier.get_full_name|default:"sans nom" }}) ?
+                </p>
+                {% if not activation %}
+                    <p class="small text-muted">
+                        Un compte désactivé ne peut plus se connecter, mais son historique est conservé.
+                    </p>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn {% if activation %}btn-success{% else %}btn-danger{% endif %}">
+                        Confirmer
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{% url 'utilisateurs:liste' %}">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

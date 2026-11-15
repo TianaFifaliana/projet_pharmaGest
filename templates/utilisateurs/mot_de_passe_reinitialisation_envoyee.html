@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Lien envoyé{% endblock %}
+{% block page_title %}Lien de réinitialisation envoyé{% endblock %}
+
+{% block content %}
+<div class="alert alert-info">
+    <i class="bi bi-envelope-check me-1"></i>
+    Si un compte actif correspond à cette adresse e-mail, un message contenant
+    les instructions de réinitialisation vient d'être envoyé.
+</div>
+<p class="text-muted small">
+    En développement, l'e-mail est affiché dans la console du serveur.
+</p>
+<a class="btn btn-outline-secondary" href="{% url 'utilisateurs:connexion' %}">Retour à la connexion</a>
+{% endblock %}

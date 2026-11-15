@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5">Bienvenue, {{ user.get_full_name|default:user.username }}</h2>
+                <p class="text-muted mb-3">
+                    Vous êtes connecté à PharmaGest avec le{{ user.noms_roles|length|pluralize }} rôle{{ user.noms_roles|length|pluralize }} suivant{{ user.noms_roles|length|pluralize }} :
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for role in user.noms_roles %}
+                        <span class="badge text-bg-success">{{ role }}</span>
+                    {% empty %}
+                        <span class="badge text-bg-secondary">Aucun rôle attribué</span>
+                    {% endfor %}
+                </div>
+                <p class="small text-muted mt-3 mb-0">
+                    Les modules accessibles apparaissent dans le menu selon vos permissions.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted">Accès rapides</h2>
+                <div class="list-group list-group-flush">
+                    {% if perms.utilisateurs.add_user %}
+                        <a class="list-group-item list-group-item-action px-0" href="{% url 'utilisateurs:creation' %}">
+                            <i class="bi bi-person-plus me-2"></i>Créer un compte utilisateur
+                        </a>
+                    {% endif %}
+                    {% if perms.utilisateurs.view_user %}
+                        <a class="list-group-item list-group-item-action px-0" href="{% url 'utilisateurs:liste' %}">
+                            <i class="bi bi-people me-2"></i>Consulter les comptes
+                        </a>
+                    {% endif %}
+                    <a class="list-group-item list-group-item-action px-0" href="{% url 'utilisateurs:changement_mot_de_passe' %}">
+                        <i class="bi bi-key me-2"></i>Changer mon mot de passe
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
