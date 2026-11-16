@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Inventaire physique{% endblock %}
+{% block page_title %}Inventaire physique{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{% url 'stock:disponible' %}"><i class="bi bi-arrow-left me-1"></i>Stock</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Sélection du lot</h2>
+                <form method="get">
+                    <label class="form-label">Lot</label>
+                    <select name="lot" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Choisir un lot --</option>
+                        {% for l in lots %}
+                            <option value="{{ l.pk }}" {% if lot and lot.pk == l.pk %}selected{% endif %}>{{ l.medicament }} — lot {{ l.numero_lot }} (dispo {{ l.quantite_disponible }})</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+        {% if lot %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Lot sélectionné</h2>
+                <dl class="row mb-0">
+                    <dt class="col-6">Médicament</dt><dd class="col-6">{{ lot.medicament }}</dd>
+                    <dt class="col-6">N° lot</dt><dd class="col-6">{{ lot.numero_lot }}</dd>
+                    <dt class="col-6">Péremption</dt><dd class="col-6">{{ lot.date_peremption|date:"d/m/Y" }}</dd>
+                    <dt class="col-6">Qté reçue</dt><dd class="col-6">{{ lot.quantite_recue }}</dd>
+                    <dt class="col-6">Qté disponible (système)</dt><dd class="col-6 fw-semibold">{{ lot.quantite_disponible }}</dd>
+                    <dt class="col-6">Bloqué</dt><dd class="col-6">{% if lot.bloque %}Oui{% else %}Non{% endif %}</dd>
+                </dl>
+                {% if ecart is not None %}
+                    <hr>
+                    <p class="mb-0">Stock compté : <strong>{{ stock_compte_preview }}</strong> — Écart :
+                        {% if ecart > 0 %}<span class="badge text-bg-success">+{{ ecart }}</span>
+                        {% elif ecart < 0 %}<span class="badge text-bg-danger">{{ ecart }}</span>
+                        {% else %}<span class="badge text-bg-secondary">0</span>{% endif %}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Saisie et correction</h2>
+                {% if not lot %}
+                    <p class="text-muted mb-0">Sélectionnez un lot pour saisir le stock compté et enregistrer une correction.</p>
+                {% else %}
+                    <div class="alert alert-info">La correction génère un <strong>MouvementStock de type correction</strong> avec motif obligatoire. Le stock disponible (et la quantité reçue si nécessaire) sera ajusté.</div>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="lot" value="{{ lot.pk }}">
+                        {% include "includes/_formulaire.html" with form=form %}
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-success" onclick="return confirm('Appliquer la correction d\'inventaire pour ce lot ?');">
+                                <i class="bi bi-check-lg me-1"></i>Valider la correction
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

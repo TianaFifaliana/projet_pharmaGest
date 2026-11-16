@@ -1,0 +1,46 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Retour - {{ vente.numero }}{% endblock %}
+{% block page_title %}Retour de ligne - {{ vente.numero }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{% url 'ventes:detail' vente.pk %}"><i class="bi bi-arrow-left me-1"></i>Retour vente</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Ligne concernée</h2>
+                <dl class="row mb-0">
+                    <dt class="col-5">Médicament</dt><dd class="col-7">{{ ligne.lot.medicament }}</dd>
+                    <dt class="col-5">Lot</dt><dd class="col-7">{{ ligne.lot.numero_lot }}</dd>
+                    <dt class="col-5">Péremption</dt><dd class="col-7">{{ ligne.lot.date_peremption|date:"d/m/Y" }}</dd>
+                    <dt class="col-5">Qté vendue</dt><dd class="col-7">{{ ligne.quantite }}</dd>
+                    <dt class="col-5">Qté retournable</dt><dd class="col-7 fw-semibold">{{ ligne.quantite_retournable }}</dd>
+                    <dt class="col-5">Prix appliqué</dt><dd class="col-7">{{ ligne.prix_applique|floatformat:2 }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Enregistrer le retour</h2>
+                <div class="alert alert-info mb-3">
+                    La remise en stock ne sera effectuée que si le produit est marqué <strong>réintégrable</strong>. Un mouvement de stock de type retour et une opération compensatoire traçable seront enregistrés. La vente d'origine n'est jamais supprimée.
+                </div>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% include "includes/_formulaire.html" with form=form %}
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-warning"><i class="bi bi-check-lg me-1"></i>Valider le retour</button>
+                        <a class="btn btn-outline-secondary" href="{% url 'ventes:detail' vente.pk %}">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

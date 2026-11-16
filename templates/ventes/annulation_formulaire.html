@@ -1,0 +1,33 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Annuler {{ vente.numero }}{% endblock %}
+{% block page_title %}Annuler la vente {{ vente.numero }}{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{% url 'ventes:detail' vente.pk %}"><i class="bi bi-arrow-left me-1"></i>Retour vente</a>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="alert alert-danger">
+            Cette action crée une <strong>opération compensatoire</strong> (retours + mouvements de stock en entrée + annulation des paiements valides) et journalise l'annulation. La vente d'origine n'est jamais supprimée.
+        </div>
+        <dl class="row mb-3">
+            <dt class="col-sm-3">Vente</dt><dd class="col-sm-9">{{ vente.numero }}</dd>
+            <dt class="col-sm-3">Client</dt><dd class="col-sm-9">{{ vente.client|default:"Client comptoir" }}</dd>
+            <dt class="col-sm-3">Montant total</dt><dd class="col-sm-9">{{ vente.montant_total|floatformat:2 }}</dd>
+        </dl>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include "includes/_formulaire.html" with form=form %}
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Confirmer l\'annulation compensatoire de cette vente ?');">
+                    <i class="bi bi-x-octagon me-1"></i>Confirmer l'annulation
+                </button>
+                <a class="btn btn-outline-secondary" href="{% url 'ventes:detail' vente.pk %}">Retour</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

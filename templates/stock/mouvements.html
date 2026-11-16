@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Mouvements de stock{% endblock %}
+{% block page_title %}Historique des mouvements{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{% url 'stock:disponible' %}"><i class="bi bi-arrow-left me-1"></i>Stock</a>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3"><label class="form-label">{{ form_filtre.medicament.label }}</label>{{ form_filtre.medicament }}</div>
+            <div class="col-md-2"><label class="form-label">{{ form_filtre.type_mouvement.label }}</label>{{ form_filtre.type_mouvement }}</div>
+            <div class="col-md-2"><label class="form-label">{{ form_filtre.date_debut.label }}</label>{{ form_filtre.date_debut }}</div>
+            <div class="col-md-2"><label class="form-label">{{ form_filtre.date_fin.label }}</label>{{ form_filtre.date_fin }}</div>
+            <div class="col-md-3"><label class="form-label">{{ form_filtre.utilisateur.label }}</label>{{ form_filtre.utilisateur }}</div>
+            <div class="col-12 d-flex gap-2 mt-2">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+                <a class="btn btn-outline-secondary" href="{% url 'stock:mouvements' %}">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Médicament</th><th>Lot</th><th class="text-end">Quantité</th><th>Auteur</th><th>Référence</th><th>Commentaire</th></tr></thead>
+                <tbody>
+                    {% for mvt in mouvements %}
+                        <tr>
+                            <td>{{ mvt.date_mouvement|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if mvt.type_mouvement == 'entree' %}<span class="badge text-bg-success">Entrée</span>
+                                {% elif mvt.type_mouvement == 'sortie' %}<span class="badge text-bg-danger">Sortie</span>
+                                {% elif mvt.type_mouvement == 'retour' %}<span class="badge text-bg-info">Retour</span>
+                                {% else %}<span class="badge text-bg-warning">Correction</span>{% endif %}
+                            </td>
+                            <td>{{ mvt.lot.medicament }}</td>
+                            <td>{{ mvt.lot.numero_lot }}</td>
+                            <td class="text-end">{{ mvt.quantite }}</td>
+                            <td>{{ mvt.auteur }}</td>
+                            <td>{{ mvt.reference|default:"-" }}</td>
+                            <td class="small">{{ mvt.commentaire|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8" class="text-muted">Aucun mouvement.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if is_paginated %}
+            <nav class="mt-3"><ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">Précédent</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Suivant</a></li>{% endif %}
+            </ul></nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

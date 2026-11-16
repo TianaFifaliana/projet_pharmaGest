@@ -1,24 +1,20 @@
-"""
-Configuration Django du projet PharmaGest.
-
-Les valeurs sensibles (SECRET_KEY, DEBUG, ALLOWED_HOSTS) sont lues depuis le
-fichier .env à la racine du projet (via python-decouple).
+﻿"""
+Configuration Django de base du projet PharmaGest.
+Les valeurs sensibles et spécifiques à l'environnement sont lues via .env.
 """
 
 from pathlib import Path
 
 from decouple import Csv, config
+from django.contrib.messages import constants as messages
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-
-# Sécurité
+# Sécurité / base
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv()
-)
-
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 
 # Applications
 INSTALLED_APPS = [
@@ -68,15 +64,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-
-# Base de données : SQLite en développement, PostgreSQL en production
-if config("DB_ENGINE", default="sqlite") == "postgresql":
+# Base de données : SQLite (dev) ou PostgreSQL (prod) via variables d'environnement
+DB_ENGINE = config("DB_ENGINE", default="sqlite").lower()
+if DB_ENGINE == "postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": config("DB_NAME"),
             "USER": config("DB_USER"),
-            "PASSWORD": config("DB_PASSWORD"),
+            "PASSWORD": config("DB_PASSWORD", default=""),
             "HOST": config("DB_HOST", default="localhost"),
             "PORT": config("DB_PORT", default="5432"),
         }
@@ -85,50 +81,32 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": BASE_DIR / config("SQLITE_NAME", default="db.sqlite3"),
         }
     }
 
-
 # Validation des mots de passe
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
-
 
 # Internationalisation
 LANGUAGE_CODE = "fr"
-
 TIME_ZONE = "Indian/Antananarivo"
-
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Fichiers statiques et médias
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-
-# Clé primaire par défaut
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 
 # Authentification
 AUTH_USER_MODEL = "utilisateurs.User"
@@ -138,11 +116,9 @@ LOGOUT_REDIRECT_URL = "utilisateurs:connexion"
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="pharmagest@localhost")
 EMAIL_SUBJECT_PREFIX = "[PharmaGest] "
-
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 
 # Messages : classes Bootstrap 5
-from django.contrib.messages import constants as messages  # noqa: E402
-
 MESSAGE_TAGS = {
     messages.DEBUG: "secondary",
     messages.INFO: "info",
@@ -151,10 +127,18 @@ MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
 
-
-# Email
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
-    },
-}
+# Sécurité (valeurs sûres par défaut ; renforcées en production)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="Lax")
+CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="Lax")
+X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if config("USE_X_FORWARDED_PROTO", default=False, cast=bool) else None

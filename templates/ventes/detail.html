@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Vente {{ vente.numero }}{% endblock %}
+{% block page_title %}Vente {{ vente.numero }}{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" href="{% url 'ventes:liste' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+        <a class="btn btn-primary" href="{% url 'ventes:recu' vente.pk %}"><i class="bi bi-receipt me-1"></i>Reçu</a>
+        <a class="btn btn-outline-dark" href="{% url 'rapports:pdf_recu_vente' vente.pk %}"><i class="bi bi-download me-1"></i>Reçu PDF</a>
+        <a class="btn btn-outline-dark" href="{% url 'rapports:pdf_facture_vente' vente.pk %}"><i class="bi bi-file-earmark-pdf me-1"></i>Facture PDF</a>
+        {% if peut_annuler %}
+            <a class="btn btn-outline-danger" href="{% url 'ventes:annuler' vente.pk %}"><i class="bi bi-x-octagon me-1"></i>Annuler la vente</a>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Informations</h2>
+            <dl class="row mb-0">
+                <dt class="col-5">Client</dt><dd class="col-7">{{ vente.client|default:"Client comptoir" }}</dd>
+                <dt class="col-5">Statut</dt><dd class="col-7">
+                    {% if vente.statut == 'validee' %}<span class="badge text-bg-success">{{ vente.get_statut_display }}</span>
+                    {% elif vente.statut == 'annulee' %}<span class="badge text-bg-danger">{{ vente.get_statut_display }}</span>
+                    {% else %}<span class="badge text-bg-secondary">{{ vente.get_statut_display }}</span>{% endif %}
+                </dd>
+                <dt class="col-5">Caissier</dt><dd class="col-7">{{ vente.auteur }}</dd>
+                <dt class="col-5">Créée le</dt><dd class="col-7">{{ vente.date_creation|date:"d/m/Y H:i" }}</dd>
+                <dt class="col-5">Validée le</dt><dd class="col-7">{{ vente.date_validation|date:"d/m/Y H:i"|default:"-" }}</dd>
+            </dl>
+            {% if vente.commentaire %}<hr><p class="small mb-0">{{ vente.commentaire|linebreaksbr }}</p>{% endif %}
+        </div></div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Paiements</h2>
+            <div class="table-responsive"><table class="table table-sm mb-0">
+                <thead class="table-light"><tr><th>Mode</th><th>Statut</th><th class="text-end">Montant</th><th>Date</th><th>Auteur</th></tr></thead>
+                <tbody>
+                {% for p in vente.paiements.all %}
+                    <tr>
+                        <td>{{ p.get_mode_display }}</td>
+                        <td>
+                            {% if p.statut == 'en_attente' %}<span class="badge text-bg-warning">En attente</span>
+                            {% elif p.statut == 'valide' %}<span class="badge text-bg-success">Confirmé</span>
+                            {% else %}<span class="badge text-bg-secondary">{{ p.get_statut_display }}</span>{% endif %}
+                            {% if p.mode == 'mobile_money' and p.statut == 'en_attente' %}<div class="small text-muted">À confirmer après vérification fiable.</div>{% endif %}
+                        </td>
+                        <td class="text-end">{{ p.montant|floatformat:2 }}</td>
+                        <td>{{ p.date_paiement|date:"d/m/Y H:i" }}</td>
+                        <td>{{ p.auteur }}</td>
+                    </tr>
+                {% empty %}<tr><td colspan="5" class="text-muted">Aucun paiement.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Lignes de vente</h2>
+        <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+            <thead class="table-light"><tr><th>Médicament</th><th>Lot</th><th>Péremption</th><th class="text-end">Qté</th><th class="text-end">Retournée</th><th class="text-end">Restant</th><th class="text-end">Prix appliqué</th><th class="text-end">Sous-total</th><th></th></tr></thead>
+            <tbody>
+                {% for l in lignes_detail %}
+                <tr>
+                    <td>{{ l.lot.medicament }}</td>
+                    <td>{{ l.lot.numero_lot }}</td>
+                    <td>{{ l.lot.date_peremption|date:"d/m/Y" }}</td>
+                    <td class="text-end">{{ l.quantite }}</td>
+                    <td class="text-end">{{ l.qte_retournee_calc }}</td>
+                    <td class="text-end">{{ l.qte_retournable_calc }}</td>
+                    <td class="text-end">{{ l.prix_applique|floatformat:2 }}</td>
+                    <td class="text-end">{{ l.total_ligne|floatformat:2 }}</td>
+                    <td class="text-end">
+                        {% if peut_gerer_retours and vente.statut == 'validee' and l.qte_retournable_calc > 0 %}
+                            <a class="btn btn-sm btn-outline-warning" href="{% url 'ventes:retour_ligne' vente.pk l.pk %}">Retour</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}<tr><td colspan="9" class="text-muted">Aucune ligne.</td></tr>{% endfor %}
+            </tbody>
+            <tfoot><tr class="table-light"><th colspan="7" class="text-end">Total</th><th class="text-end">{{ vente.montant_total|floatformat:2 }}</th><th></th></tr></tfoot>
+        </table></div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Retours / opérations compensatoires</h2>
+        <div class="table-responsive"><table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Ligne / Lot</th><th class="text-end">Qté</th><th>Réintégrable</th><th class="text-end">Montant</th><th>Motif</th><th>Auteur</th></tr></thead>
+            <tbody>
+                {% for r in vente.retours.all %}
+                <tr>
+                    <td>{{ r.date_creation|date:"d/m/Y H:i" }}</td>
+                    <td>{{ r.get_type_retour_display }}</td>
+                    <td>{% if r.ligne_vente %}{{ r.ligne_vente.lot.medicament }} (lot {{ r.lot.numero_lot|default:r.ligne_vente.lot.numero_lot }}){% else %}-{% endif %}</td>
+                    <td class="text-end">{{ r.quantite }}</td>
+                    <td>{% if r.reintegrable %}<span class="badge text-bg-success">Oui</span>{% else %}<span class="badge text-bg-secondary">Non</span>{% endif %}</td>
+                    <td class="text-end">{{ r.montant|floatformat:2 }}</td>
+                    <td>{{ r.motif }}</td>
+                    <td>{{ r.auteur }}</td>
+                </tr>
+                {% empty %}<tr><td colspan="8" class="text-muted">Aucun retour.</td></tr>{% endfor %}
+            </tbody>
+        </table></div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Caisse{% endblock %}
+{% block page_title %}Caisse - Nouvelle vente{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn-outline-secondary" href="{% url 'ventes:liste' %}"><i class="bi bi-list me-1"></i>Historique des ventes</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <label for="recherche-medicament" class="form-label fw-semibold">Recherche médicament (nom ou code-barres)</label>
+                <input type="text" id="recherche-medicament" class="form-control form-control-lg" placeholder="Scanner ou saisir un nom / code-barres..." autofocus autocomplete="off">
+                <div id="resultats-recherche" class="list-group mt-2"></div>
+                <div class="form-text">Sélectionnez un médicament pour l'ajouter au panier (lot FEFO proposé automatiquement, modifiable parmi les lots valides).</div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Panier</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle" id="panier-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Médicament</th>
+                                <th style="width:30%">Lot (FEFO modifiable)</th>
+                                <th style="width:10%" class="text-end">Qté</th>
+                                <th style="width:12%" class="text-end">PU</th>
+                                <th style="width:12%" class="text-end">Sous-total</th>
+                                <th style="width:5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="panier-body">
+                            <tr id="panier-vide"><td colspan="6" class="text-muted">Panier vide.</td></tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <th colspan="4" class="text-end">Total</th>
+                                <th class="text-end" id="total-general">0.00</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Paiement et validation</h2>
+                <form method="post" id="vente-form" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="vente_token" value="{{ vente_token }}">
+                    {{ form.lignes_json }}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.client.id_for_label }}">{{ form.client.label }}</label>
+                        {{ form.client }}
+                        {% for e in form.client.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.mode_paiement.id_for_label }}">{{ form.mode_paiement.label }}</label>
+                        {{ form.mode_paiement }}
+                        {% for e in form.mode_paiement.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                        <div class="form-text">Mobile money : paiement enregistré <strong>en attente</strong> (jamais confirmé sans vérification fiable). Autres moyens : confirmé.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.commentaire.id_for_label }}">{{ form.commentaire.label }}</label>
+                        {{ form.commentaire }}
+                    </div>
+                    {% for e in form.lignes_json.errors %}<div class="alert alert-danger">{{ e }}</div>{% endfor %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg" id="btn-valider">
+                            <i class="bi bi-check2-circle me-1"></i>Confirmer la vente
+                        </button>
+                        <a class="btn btn-outline-secondary" href="{% url 'ventes:caisse' %}">Vider / Nouveau</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="caisse-config"
+     data-search-url="{% url 'ventes:api_medicaments' %}"
+     data-lots-url-template="{% url 'ventes:api_lots' 0 %}"></div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/caisse_vente.js' %}"></script>
+{% endblock %}

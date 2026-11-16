@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Alertes stock{% endblock %}
+{% block page_title %}Alertes stock{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" href="{% url 'stock:disponible' %}"><i class="bi bi-arrow-left me-1"></i>Stock</a>
+        <a class="btn btn-outline-dark" href="{% url 'rapports:pdf_produits_peremption' %}?jours={{ jours_peremption }}"><i class="bi bi-download me-1"></i>Produits proches péremption (PDF)</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">{{ form.jours.label }}</label>
+                {{ form.jours }}
+                <div class="form-text">Seuil configurable (30 jours par défaut) pour la péremption proche.</div>
+            </div>
+            <div class="col-md-2"><button class="btn btn-primary" type="submit">Appliquer</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-danger"><div class="card-body"><div class="text-muted small">Ruptures</div><div class="h3 mb-0 text-danger">{{ ruptures|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-warning"><div class="card-body"><div class="text-muted small">Sous seuil</div><div class="h3 mb-0 text-warning">{{ sous_seuil|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-danger"><div class="card-body"><div class="text-muted small">Lots périmés</div><div class="h3 mb-0 text-danger">{{ lots_perimes|length }}</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-warning"><div class="card-body"><div class="text-muted small">Péremption proche (≤ {{ jours_peremption }} j)</div><div class="h3 mb-0 text-warning">{{ lots_proches|length }}</div></div></div></div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-2"><span class="badge text-bg-danger me-1">Rupture</span> Médicaments en rupture (stock valide = 0)</h2>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Médicament</th><th class="text-end">Stock valide</th><th class="text-end">Seuil</th></tr></thead><tbody>
+            {% for m in ruptures %}<tr><td>{{ m }}</td><td class="text-end">{{ m.stock_valide_calc|default:0 }}</td><td class="text-end">{{ m.seuil_alerte }}</td></tr>
+            {% empty %}<tr><td colspan="3" class="text-muted">Aucune rupture.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-2"><span class="badge text-bg-warning me-1">Alerte</span> Stock inférieur au seuil</h2>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Médicament</th><th class="text-end">Stock valide</th><th class="text-end">Seuil</th></tr></thead><tbody>
+            {% for m in sous_seuil %}<tr><td>{{ m }}</td><td class="text-end">{{ m.stock_valide_calc|default:0 }}</td><td class="text-end">{{ m.seuil_alerte }}</td></tr>
+            {% empty %}<tr><td colspan="3" class="text-muted">Aucun médicament sous seuil.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-2"><span class="badge text-bg-danger me-1">Périmé</span> Lots périmés (quantité &gt; 0)</h2>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Médicament</th><th>Lot</th><th>Péremption</th><th class="text-end">Disponible</th></tr></thead><tbody>
+            {% for lot in lots_perimes %}<tr><td>{{ lot.medicament }}</td><td>{{ lot.numero_lot }}</td><td>{{ lot.date_peremption|date:"d/m/Y" }}</td><td class="text-end">{{ lot.quantite_disponible }}</td></tr>
+            {% empty %}<tr><td colspan="4" class="text-muted">Aucun lot périmé.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-2"><span class="badge text-bg-warning me-1">Bientôt</span> Péremption proche (≤ {{ jours_peremption }} jours)</h2>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Médicament</th><th>Lot</th><th>Péremption</th><th class="text-end">Disponible</th></tr></thead><tbody>
+            {% for lot in lots_proches %}<tr><td>{{ lot.medicament }}</td><td>{{ lot.numero_lot }}</td><td>{{ lot.date_peremption|date:"d/m/Y" }}</td><td class="text-end">{{ lot.quantite_disponible }}</td></tr>
+            {% empty %}<tr><td colspan="4" class="text-muted">Aucun lot proche de la péremption.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div>
+</div>
+{% endblock %}

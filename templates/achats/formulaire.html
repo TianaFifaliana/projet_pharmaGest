@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+{% block page_title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate id="commande-form">
+    {% csrf_token %}
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-muted mb-3">Commande</h2>
+                    {% include "includes/_formulaire.html" with form=form %}
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="mb-1"><strong>Total :</strong> <span id="grand-total">0.00</span></p>
+                    <p class="small text-muted mb-0">Le total est calculé automatiquement et vérifié côté serveur. La commande ne modifie pas le stock (réception validée uniquement).</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="h6 text-uppercase text-muted mb-0">Lignes</h2>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-line">
+                            <i class="bi bi-plus-lg me-1"></i>Ajouter une ligne
+                        </button>
+                    </div>
+                    {{ formset.management_form }}
+                    {% if formset.non_form_errors %}
+                        <div class="alert alert-danger">{% for e in formset.non_form_errors %}<div>{{ e }}</div>{% endfor %}</div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle" id="lignes-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:45%">Médicament</th>
+                                    <th style="width:15%">Quantité</th>
+                                    <th style="width:20%">Prix unitaire</th>
+                                    <th style="width:15%" class="text-end">Total</th>
+                                    <th style="width:5%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="formset-body">
+                                {% for f in formset %}
+                                    <tr class="ligne-form">
+                                        <td>
+                                            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+                                            {{ f.medicament }}
+                                            {% for e in f.medicament.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                                        </td>
+                                        <td>
+                                            {{ f.quantite }}
+                                            {% for e in f.quantite.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                                        </td>
+                                        <td>
+                                            {{ f.prix_unitaire }}
+                                            {% for e in f.prix_unitaire.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                                        </td>
+                                        <td class="text-end"><span class="line-total">0.00</span></td>
+                                        <td class="text-center">
+                                            <span class="d-none">{{ f.DELETE }}</span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="Supprimer"><i class="bi bi-x-lg"></i></button>
+                                        </td>
+                                    </tr>
+                                    {% if f.non_field_errors %}
+                                        <tr><td colspan="5"><div class="text-danger small">{% for e in f.non_field_errors %}{{ e }}{% endfor %}</div></td></tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <template id="empty-form-template">
+                        <tr class="ligne-form">
+                            <td>
+                                {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                {{ formset.empty_form.medicament }}
+                            </td>
+                            <td>{{ formset.empty_form.quantite }}</td>
+                            <td>{{ formset.empty_form.prix_unitaire }}</td>
+                            <td class="text-end"><span class="line-total">0.00</span></td>
+                            <td class="text-center">
+                                <span class="d-none">{{ formset.empty_form.DELETE }}</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="Supprimer"><i class="bi bi-x-lg"></i></button>
+                            </td>
+                        </tr>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>{{ bouton }}</button>
+        <a class="btn btn-outline-secondary" href="{% if commande %}{% url 'achats:detail' commande.pk %}{% else %}{% url 'achats:liste' %}{% endif %}">Annuler</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/achats_formset.js' %}"></script>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import JournalAudit
+from .models import JournalAudit, Parametres
 
 
 @admin.register(JournalAudit)
@@ -40,3 +40,13 @@ class JournalAuditAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Parametres)
+class ParametresAdmin(admin.ModelAdmin):
+    list_display = ("nom_pharmacie", "telephone", "nif", "stat", "date_modification")
+
+    def has_add_permission(self, request):
+        if Parametres.objects.exists():
+            return False
+        return super().has_add_permission(request)

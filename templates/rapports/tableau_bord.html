@@ -1,0 +1,146 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-dark btn-sm" href="{% url 'rapports:pdf_rapport_ventes' %}?date_debut={{ date_debut|date:'Y-m-d' }}&date_fin={{ date_fin|date:'Y-m-d' }}"><i class="bi bi-download me-1"></i>Rapport ventes PDF</a>
+        {% if voir_stats_globales %}
+            <a class="btn btn-outline-dark btn-sm" href="{% url 'rapports:pdf_rapport_achats' %}?date_debut={{ date_debut|date:'Y-m-d' }}&date_fin={{ date_fin|date:'Y-m-d' }}"><i class="bi bi-download me-1"></i>Rapport achats PDF</a>
+        {% endif %}
+        <a class="btn btn-outline-dark btn-sm" href="{% url 'rapports:pdf_rapport_stock' %}"><i class="bi bi-download me-1"></i>Rapport stock PDF</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="card shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3"><label class="form-label">{{ form.date_debut.label }}</label>{{ form.date_debut }}</div>
+            <div class="col-md-3"><label class="form-label">{{ form.date_fin.label }}</label>{{ form.date_fin }}</div>
+            <div class="col-md-2 d-grid"><button class="btn btn-primary" type="submit">Appliquer</button></div>
+            <div class="col-md-4 text-muted small">
+                Période : {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
+                {% if scope_propres %}<span class="badge text-bg-info ms-1">Mes ventes uniquement</span>{% endif %}
+            </div>
+        </div>
+        {% if form.errors %}<div class="text-danger small mt-2">{{ form.errors }}</div>{% endif %}
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small text-uppercase">Médicaments actifs</div><div class="fs-3 fw-semibold">{{ medicaments_actifs }}</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small text-uppercase">Ventes du jour (CA)</div><div class="fs-3 fw-semibold">{{ ca_jour|floatformat:2 }}</div><div class="small text-muted">Chiffre d'affaires</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small text-uppercase">Stocks faibles</div><div class="fs-3 fw-semibold">{{ stocks_faibles }}</div><div class="small text-muted">Sous seuil / rupture</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small text-uppercase">Péremptions proches</div><div class="fs-3 fw-semibold">{{ peremptions_proches }}</div><div class="small text-muted">{{ lots_perimes_count }} lot(s) périmé(s)</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-primary"><div class="card-body"><div class="text-muted small">Chiffre d'affaires (période)</div><div class="fs-4 fw-semibold">{{ ca_periode|floatformat:2 }}</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-success"><div class="card-body"><div class="text-muted small">Encaissements (période)</div><div class="fs-4 fw-semibold">{{ encaissements_periode|floatformat:2 }}</div><div class="small text-muted">Paiements validés</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-info"><div class="card-body"><div class="text-muted small">Marge commerciale (période)</div><div class="fs-4 fw-semibold">{{ marge_commerciale|floatformat:2 }}</div><div class="small text-muted">CA - coût d'achat estimé</div></div></div></div>
+    <div class="col-md-3"><div class="card shadow-sm h-100 border-secondary"><div class="card-body"><div class="text-muted small">Achats / réceptions (période)</div><div class="fs-4 fw-semibold">{% if voir_stats_globales %}{{ achats_periode|floatformat:2 }}{% else %}-{% endif %}</div><div class="small text-muted">Réceptions validées</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Ventes par catégorie</h2>
+            <canvas id="chartCategorie" height="220"></canvas>
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Top produits vendus (qté)</h2>
+            <canvas id="chartTop" height="220"></canvas>
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Ventes mensuelles (12 mois)</h2>
+            <canvas id="chartMois" height="220"></canvas>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Top produits vendus</h2>
+            <div class="table-responsive"><table class="table table-sm mb-0">
+                <thead class="table-light"><tr><th>Produit</th><th class="text-end">Qté</th><th class="text-end">Montant</th></tr></thead>
+                <tbody>
+                {% for p in top_produits %}
+                    <tr><td>{{ p.lot__medicament__nom_commercial }}</td><td class="text-end">{{ p.quantite_vendue }}</td><td class="text-end">{{ p.montant_vendu|floatformat:2 }}</td></tr>
+                {% empty %}<tr><td colspan="3" class="text-muted">Aucune vente sur la période.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Alertes de stock</h2>
+            <ul class="list-group list-group-flush">
+                {% for m in alertes_stock %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">{{ m.nom_commercial }}<span class="badge text-bg-warning">Stock {{ m.stock_valide }} / seuil {{ m.seuil_alerte }}</span></li>
+                {% empty %}<li class="list-group-item px-0 text-muted">Aucune alerte de stock.</li>{% endfor %}
+            </ul>
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100"><div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Lots périmés / proches</h2>
+            <div class="small fw-semibold mb-1">Périmés</div>
+            <ul class="list-group list-group-flush mb-2">
+                {% for l in lots_perimes %}
+                    <li class="list-group-item px-0 d-flex justify-content-between"><span>{{ l.medicament }} ({{ l.numero_lot }})</span><span class="text-danger">{{ l.date_peremption|date:"d/m/Y" }}</span></li>
+                {% empty %}<li class="list-group-item px-0 text-muted">Aucun lot périmé.</li>{% endfor %}
+            </ul>
+            <div class="small fw-semibold mb-1">Péremption proche</div>
+            <ul class="list-group list-group-flush">
+                {% for l in lots_proches %}
+                    <li class="list-group-item px-0 d-flex justify-content-between"><span>{{ l.medicament }} ({{ l.numero_lot }})</span><span class="text-warning">{{ l.date_peremption|date:"d/m/Y" }}</span></li>
+                {% empty %}<li class="list-group-item px-0 text-muted">Aucun lot proche péremption.</li>{% endfor %}
+            </ul>
+        </div></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const catLabels = {{ chart_cat_labels|safe }};
+  const catValues = {{ chart_cat_values|safe }};
+  const topLabels = {{ chart_top_labels|safe }};
+  const topValues = {{ chart_top_values|safe }};
+  const moisLabels = {{ chart_mois_labels|safe }};
+  const moisValues = {{ chart_mois_values|safe }};
+  const colors = ['#198754','#0d6efd','#ffc107','#dc3545','#6f42c1','#20c997','#fd7e14','#6c757d','#0dcaf0','#d63384'];
+
+  if (document.getElementById('chartCategorie')) {
+    new Chart(document.getElementById('chartCategorie'), {
+      type: 'pie',
+      data: { labels: catLabels.length ? catLabels : ['Aucune donnée'], datasets: [{ data: catValues.length ? catValues : [1], backgroundColor: colors }] },
+      options: { plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+  if (document.getElementById('chartTop')) {
+    new Chart(document.getElementById('chartTop'), {
+      type: 'bar',
+      data: { labels: topLabels, datasets: [{ label: 'Quantité vendue', data: topValues, backgroundColor: '#0d6efd' }] },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+  }
+  if (document.getElementById('chartMois')) {
+    new Chart(document.getElementById('chartMois'), {
+      type: 'line',
+      data: { labels: moisLabels, datasets: [{ label: 'Chiffre d\'affaires', data: moisValues, borderColor: '#198754', backgroundColor: 'rgba(25,135,84,0.15)', fill: true, tension: 0.2 }] },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+  }
+})();
+</script>
+{% endblock %}

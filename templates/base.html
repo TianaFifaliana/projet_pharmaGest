@@ -73,7 +73,7 @@
                                 </a>
                             {% endif %}
                             {% if user.is_superuser or perms.stock %}
-                                <a class="nav-link{% if request.path == '/stock/' %} active{% endif %}" href="/stock/">
+                                <a class="nav-link{% if '/stock/' in request.path %} active{% endif %}" href="{% url 'stock:disponible' %}">
                                     <i class="bi bi-box-seam me-2"></i>Stock et lots
                                 </a>
                             {% endif %}
@@ -82,13 +82,13 @@
                         {% if user.is_superuser or perms.achats or perms.ventes %}
                             <div class="sidebar-heading">Commerce</div>
                             {% if user.is_superuser or perms.achats %}
-                                <a class="nav-link{% if request.path == '/achats/' %} active{% endif %}" href="/achats/">
+                                <a class="nav-link{% if '/achats/' in request.path %} active{% endif %}" href="{% url 'achats:liste' %}">
                                     <i class="bi bi-cart-plus me-2"></i>Achats
                                 </a>
                             {% endif %}
                             {% if user.is_superuser or perms.ventes %}
-                                <a class="nav-link{% if request.path == '/ventes/' %} active{% endif %}" href="/ventes/">
-                                    <i class="bi bi-receipt me-2"></i>Ventes
+                                <a class="nav-link{% if '/ventes/' in request.path %} active{% endif %}" href="{% url 'ventes:caisse' %}">
+                                    <i class="bi bi-receipt me-2"></i>Ventes / Caisse
                                 </a>
                             {% endif %}
                         {% endif %}
@@ -109,8 +109,8 @@
 
                         {% if user.is_superuser or perms.rapports or perms.ventes or perms.achats or perms.stock %}
                             <div class="sidebar-heading">Pilotage</div>
-                            <a class="nav-link{% if request.path == '/rapports/' %} active{% endif %}" href="/rapports/">
-                                <i class="bi bi-graph-up me-2"></i>Rapports
+                            <a class="nav-link{% if request.resolver_match.app_name == 'rapports' %} active{% endif %}" href="{% url 'rapports:tableau_bord' %}">
+                                <i class="bi bi-graph-up me-2"></i>Tableau de bord
                             </a>
                         {% endif %}
 

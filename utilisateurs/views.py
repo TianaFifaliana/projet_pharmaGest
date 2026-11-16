@@ -5,6 +5,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import FormView, ListView, TemplateView, UpdateView
 
+from rapports.models import JournalAudit
+from stock.services import journaliser
+
 from .forms import (
     FormulaireChangementMotDePasse,
     FormulaireConfirmationReinitialisation,
@@ -42,9 +45,7 @@ class ChangementMotDePasseView(ConnexionRequiseMixin, auth_views.PasswordChangeV
     success_url = reverse_lazy("utilisateurs:changement_mot_de_passe_termine")
 
 
-class ChangementMotDePasseTermineView(
-    ConnexionRequiseMixin, auth_views.PasswordChangeDoneView
-):
+class ChangementMotDePasseTermineView(ConnexionRequiseMixin, auth_views.PasswordChangeDoneView):
     template_name = "utilisateurs/mot_de_passe_changement_termine.html"
 
 
@@ -83,11 +84,8 @@ class ListeUtilisateursView(PermissionRequiseMixin, ListView):
         recherche = self.request.GET.get("q", "").strip()
         if recherche:
             queryset = queryset.filter(
-                Q(username__icontains=recherche)
-                | Q(first_name__icontains=recherche)
-                | Q(last_name__icontains=recherche)
-                | Q(email__icontains=recherche)
-                | Q(telephone__icontains=recherche)
+                Q(username__icontains=recherche) | Q(first_name__icontains=recherche) | Q(last_name__icontains=recherche)
+                | Q(email__icontains=recherche) | Q(telephone__icontains=recherche)
             )
         role = self.request.GET.get("role", "").strip()
         if role in ROLES:
@@ -101,16 +99,14 @@ class ListeUtilisateursView(PermissionRequiseMixin, ListView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "roles": ROLES,
-                "recherche": self.request.GET.get("q", ""),
-                "role_filtre": self.request.GET.get("role", ""),
-                "statut_filtre": self.request.GET.get("statut", ""),
-                "total_comptes": User.objects.count(),
-                "total_actifs": User.objects.filter(is_active=True).count(),
-            }
-        )
+        contexte.update({
+            "roles": ROLES,
+            "recherche": self.request.GET.get("q", ""),
+            "role_filtre": self.request.GET.get("role", ""),
+            "statut_filtre": self.request.GET.get("statut", ""),
+            "total_comptes": User.objects.count(),
+            "total_actifs": User.objects.filter(is_active=True).count(),
+        })
         return contexte
 
 
@@ -122,21 +118,13 @@ class CreationUtilisateurView(PermissionRequiseMixin, FormView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "titre": "Créer un compte",
-                "bouton": "Créer le compte",
-                "mode_creation": True,
-            }
-        )
+        contexte.update({"titre": "Créer un compte", "bouton": "Créer le compte", "mode_creation": True})
         return contexte
 
     def form_valid(self, form):
         utilisateur = form.save()
-        messages.success(
-            self.request,
-            f"Le compte « {utilisateur.username} » a été créé avec succès.",
-        )
+        journaliser(self.request, self.request.user, JournalAudit.Action.CREATION, utilisateur, f"Utilisateur créé : {utilisateur.username}")
+        messages.success(self.request, f"Le compte « {utilisateur.username} » a été créé avec succès.")
         return super().form_valid(form)
 
 
@@ -154,67 +142,43 @@ class ModificationUtilisateurView(PermissionRequiseMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "titre": f"Modifier le compte de {self.object.username}",
-                "bouton": "Enregistrer les modifications",
-                "mode_creation": False,
-            }
-        )
+        contexte.update({"titre": f"Modifier le compte de {self.object.username}", "bouton": "Enregistrer les modifications", "mode_creation": False})
         return contexte
 
     def form_valid(self, form):
-        messages.success(
-            self.request,
-            f"Le compte « {form.instance.username} » a été mis à jour.",
-        )
-        return super().form_valid(form)
+        reponse = super().form_valid(form)
+        journaliser(self.request, self.request.user, JournalAudit.Action.MODIFICATION, form.instance, f"Utilisateur modifié : {form.instance.username}")
+        messages.success(self.request, f"Le compte « {form.instance.username} » a été mis à jour.")
+        return reponse
 
 
 def _changer_statut(request, utilisateur, actif):
     if utilisateur.pk == request.user.pk and not actif:
         messages.error(request, "Vous ne pouvez pas désactiver votre propre compte.")
         return redirect("utilisateurs:liste")
-
     if not actif and utilisateur.is_active and utilisateur.a_un_role(ADMINISTRATEUR):
-        autres_administrateurs = (
-            User.objects.filter(is_active=True, groups__name=ADMINISTRATEUR)
-            .exclude(pk=utilisateur.pk)
-            .exists()
-        )
+        autres_administrateurs = User.objects.filter(is_active=True, groups__name=ADMINISTRATEUR).exclude(pk=utilisateur.pk).exists()
         if not autres_administrateurs:
-            messages.error(
-                request,
-                "Impossible de désactiver le dernier administrateur actif du site.",
-            )
+            messages.error(request, "Impossible de désactiver le dernier administrateur actif du site.")
             return redirect("utilisateurs:liste")
-
     if request.method == "POST":
         if utilisateur.is_active != actif:
             utilisateur.is_active = actif
             utilisateur.save(update_fields=["is_active"])
-            action = "activé" if actif else "désactivé"
-            messages.success(
-                request, f"Le compte « {utilisateur.username} » a été {action}."
-            )
+            action_txt = "activé" if actif else "désactivé"
+            journaliser(request, request.user, JournalAudit.Action.MODIFICATION, utilisateur, f"Utilisateur {action_txt} : {utilisateur.username}")
+            messages.success(request, f"Le compte « {utilisateur.username} » a été {action_txt}.")
         else:
             messages.info(request, "Le statut du compte était déjà à jour.")
         return redirect("utilisateurs:liste")
-
-    return render(
-        request,
-        "utilisateurs/confirmation_statut.html",
-        {"utilisateur_a_modifier": utilisateur, "activation": actif},
-    )
+    return render(request, "utilisateurs/confirmation_statut.html", {"utilisateur_a_modifier": utilisateur, "activation": actif})
 
 
 @permission_requise("utilisateurs.change_user")
 def activer_utilisateur(request, pk):
-    utilisateur = get_object_or_404(User, pk=pk)
-    return _changer_statut(request, utilisateur, True)
+    return _changer_statut(request, get_object_or_404(User, pk=pk), True)
 
 
 @permission_requise("utilisateurs.change_user")
 def desactiver_utilisateur(request, pk):
-    utilisateur = get_object_or_404(User, pk=pk)
-    return _changer_statut(request, utilisateur, False)
+    return _changer_statut(request, get_object_or_404(User, pk=pk), False)

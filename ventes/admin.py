@@ -69,13 +69,13 @@ class PaiementAdmin(admin.ModelAdmin):
 
 @admin.register(RetourVente)
 class RetourVenteAdmin(admin.ModelAdmin):
-    list_display = ("vente", "montant", "auteur", "date_creation")
-    list_filter = ("date_creation",)
-    search_fields = ("vente__numero", "motif", "auteur__username")
-    list_select_related = ("vente", "auteur")
+    list_display = ("vente", "type_retour", "ligne_vente", "lot", "quantite", "reintegrable", "montant", "auteur", "date_creation")
+    list_filter = ("type_retour", "reintegrable", "date_creation")
+    search_fields = ("vente__numero", "motif", "auteur__username", "lot__numero_lot")
+    list_select_related = ("vente", "ligne_vente", "lot", "auteur")
     date_hierarchy = "date_creation"
     readonly_fields = ("auteur", "date_creation")
-    autocomplete_fields = ("vente",)
+    autocomplete_fields = ("vente", "ligne_vente", "lot")
 
     def save_model(self, request, obj, form, change):
         if not change:

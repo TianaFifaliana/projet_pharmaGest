@@ -6,6 +6,8 @@ from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
+from rapports.models import JournalAudit
+from stock.services import journaliser
 from utilisateurs.mixins import PermissionRequiseMixin
 
 from .forms import FormulaireCategorie, FormulaireMedicament
@@ -32,7 +34,6 @@ class ListeMedicamentsView(PermissionRequiseMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related("categorie")
-
         recherche = self.request.GET.get("q", "").strip()
         if recherche:
             queryset = queryset.filter(
@@ -40,15 +41,12 @@ class ListeMedicamentsView(PermissionRequiseMixin, ListView):
                 | Q(nom_generique__icontains=recherche)
                 | Q(code_barres__icontains=recherche)
             )
-
         categorie = self.request.GET.get("categorie", "").strip()
         if categorie.isdigit():
             queryset = queryset.filter(categorie_id=categorie)
-
         statut = self.request.GET.get("statut", "").strip()
         if statut in Medicament.Statut.values:
             queryset = queryset.filter(statut=statut)
-
         tri = self.request.GET.get("tri", "nom")
         return queryset.order_by(*self.TRIS.get(tri, self.TRIS["nom"]))
 
@@ -72,12 +70,8 @@ class ListeMedicamentsView(PermissionRequiseMixin, ListView):
                     ("ancien", "Plus anciens"),
                 ),
                 "total_medicaments": Medicament.objects.count(),
-                "total_actifs": Medicament.objects.filter(
-                    statut=Medicament.Statut.ACTIF
-                ).count(),
-                "total_archives": Medicament.objects.filter(
-                    statut=Medicament.Statut.ARCHIVE
-                ).count(),
+                "total_actifs": Medicament.objects.filter(statut=Medicament.Statut.ACTIF).count(),
+                "total_archives": Medicament.objects.filter(statut=Medicament.Statut.ARCHIVE).count(),
             }
         )
         return contexte
@@ -114,21 +108,13 @@ class CreationMedicamentView(PermissionRequiseMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "titre": "Ajouter un médicament",
-                "bouton": "Enregistrer le médicament",
-                "mode_creation": True,
-            }
-        )
+        contexte.update({"titre": "Ajouter un médicament", "bouton": "Enregistrer le médicament", "mode_creation": True})
         return contexte
 
     def form_valid(self, form):
         reponse = super().form_valid(form)
-        messages.success(
-            self.request,
-            f"Le médicament « {self.object} » a été créé avec succès.",
-        )
+        journaliser(self.request, self.request.user, JournalAudit.Action.CREATION, self.object, f"Médicament créé : {self.object}")
+        messages.success(self.request, f"Le médicament « {self.object} » a été créé avec succès.")
         return reponse
 
     def get_success_url(self):
@@ -143,21 +129,13 @@ class ModificationMedicamentView(PermissionRequiseMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "titre": f"Modifier {self.object}",
-                "bouton": "Enregistrer les modifications",
-                "mode_creation": False,
-            }
-        )
+        contexte.update({"titre": f"Modifier {self.object}", "bouton": "Enregistrer les modifications", "mode_creation": False})
         return contexte
 
     def form_valid(self, form):
         reponse = super().form_valid(form)
-        messages.success(
-            self.request,
-            f"Le médicament « {self.object} » a été mis à jour.",
-        )
+        journaliser(self.request, self.request.user, JournalAudit.Action.MODIFICATION, self.object, f"Médicament modifié : {self.object}")
+        messages.success(self.request, f"Le médicament « {self.object} » a été mis à jour.")
         return reponse
 
     def get_success_url(self):
@@ -169,10 +147,7 @@ class SuppressionMedicamentView(PermissionRequiseMixin, View):
     template_name = "medicaments/confirmation_suppression.html"
 
     def _contexte(self, medicament):
-        return {
-            "medicament": medicament,
-            "a_un_historique": medicament.a_un_historique,
-        }
+        return {"medicament": medicament, "a_un_historique": medicament.a_un_historique}
 
     def get(self, request, pk):
         medicament = get_object_or_404(Medicament, pk=pk)
@@ -181,20 +156,16 @@ class SuppressionMedicamentView(PermissionRequiseMixin, View):
     def post(self, request, pk):
         medicament = get_object_or_404(Medicament, pk=pk)
         libelle = str(medicament)
-
         if medicament.a_un_historique:
             medicament.statut = Medicament.Statut.ARCHIVE
             medicament.save(update_fields=["statut", "date_modification"])
-            messages.warning(
-                request,
-                f"« {libelle} » possède un historique (stock, achats ou ventes). "
-                "Il a été archivé au lieu d'être supprimé afin de préserver la "
-                "traçabilité. Il reste consultable mais n'est plus actif.",
-            )
+            journaliser(request, request.user, JournalAudit.Action.MODIFICATION, medicament, f"Médicament archivé (historique présent) : {libelle}")
+            messages.warning(request, f"« {libelle} » possède un historique. Il a été archivé au lieu d'être supprimé pour préserver la traçabilité.")
         else:
+            pk_obj = medicament.pk
             medicament.delete()
+            JournalAudit.objects.create(utilisateur=request.user, action=JournalAudit.Action.SUPPRESSION, modele="Medicament", objet_id=str(pk_obj), description=f"Médicament supprimé : {libelle}")
             messages.success(request, f"Le médicament « {libelle} » a été supprimé.")
-
         return redirect("medicaments:liste")
 
 
@@ -206,28 +177,15 @@ class ListeCategoriesView(PermissionRequiseMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = (
-            super()
-            .get_queryset()
-            .annotate(nombre_medicaments=Count("medicaments"))
-            .order_by("nom")
-        )
+        queryset = super().get_queryset().annotate(nombre_medicaments=Count("medicaments")).order_by("nom")
         recherche = self.request.GET.get("q", "").strip()
         if recherche:
-            queryset = queryset.filter(
-                Q(nom__icontains=recherche)
-                | Q(description__icontains=recherche)
-            )
+            queryset = queryset.filter(Q(nom__icontains=recherche) | Q(description__icontains=recherche))
         return queryset
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "recherche": self.request.GET.get("q", ""),
-                "total_categories": Categorie.objects.count(),
-            }
-        )
+        contexte.update({"recherche": self.request.GET.get("q", ""), "total_categories": Categorie.objects.count()})
         return contexte
 
 
@@ -240,21 +198,13 @@ class CreationCategorieView(PermissionRequiseMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "titre": "Ajouter une catégorie",
-                "bouton": "Enregistrer la catégorie",
-                "mode_creation": True,
-            }
-        )
+        contexte.update({"titre": "Ajouter une catégorie", "bouton": "Enregistrer la catégorie", "mode_creation": True})
         return contexte
 
     def form_valid(self, form):
         reponse = super().form_valid(form)
-        messages.success(
-            self.request,
-            f"La catégorie « {self.object.nom} » a été créée avec succès.",
-        )
+        journaliser(self.request, self.request.user, JournalAudit.Action.CREATION, self.object, f"Catégorie créée : {self.object.nom}")
+        messages.success(self.request, f"La catégorie « {self.object.nom} » a été créée avec succès.")
         return reponse
 
 
@@ -267,21 +217,13 @@ class ModificationCategorieView(PermissionRequiseMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         contexte = super().get_context_data(**kwargs)
-        contexte.update(
-            {
-                "titre": f"Modifier {self.object.nom}",
-                "bouton": "Enregistrer les modifications",
-                "mode_creation": False,
-            }
-        )
+        contexte.update({"titre": f"Modifier {self.object.nom}", "bouton": "Enregistrer les modifications", "mode_creation": False})
         return contexte
 
     def form_valid(self, form):
         reponse = super().form_valid(form)
-        messages.success(
-            self.request,
-            f"La catégorie « {self.object.nom} » a été mise à jour.",
-        )
+        journaliser(self.request, self.request.user, JournalAudit.Action.MODIFICATION, self.object, f"Catégorie modifiée : {self.object.nom}")
+        messages.success(self.request, f"La catégorie « {self.object.nom} » a été mise à jour.")
         return reponse
 
 
@@ -290,10 +232,7 @@ class SuppressionCategorieView(PermissionRequiseMixin, View):
     template_name = "medicaments/categories/confirmation_suppression.html"
 
     def _contexte(self, categorie):
-        return {
-            "categorie": categorie,
-            "nombre_medicaments": categorie.medicaments.count(),
-        }
+        return {"categorie": categorie, "nombre_medicaments": categorie.medicaments.count()}
 
     def get(self, request, pk):
         categorie = get_object_or_404(Categorie, pk=pk)
@@ -303,25 +242,15 @@ class SuppressionCategorieView(PermissionRequiseMixin, View):
         categorie = get_object_or_404(Categorie, pk=pk)
         nombre = categorie.medicaments.count()
         if nombre:
-            messages.error(
-                request,
-                f"La catégorie « {categorie.nom} » ne peut pas être supprimée : "
-                f"elle est utilisée par {nombre} médicament"
-                f"{'s' if nombre > 1 else ''}. Réaffectez-les à une autre "
-                "catégorie avant de réessayer.",
-            )
+            messages.error(request, f"La catégorie « {categorie.nom} » ne peut pas être supprimée : elle est utilisée par {nombre} médicament(s).")
             return redirect("medicaments:categories")
-
         nom = categorie.nom
+        pk_obj = categorie.pk
         try:
             categorie.delete()
         except ProtectedError:
-            messages.error(
-                request,
-                f"La catégorie « {nom} » ne peut pas être supprimée car elle est "
-                "utilisée par des médicaments.",
-            )
+            messages.error(request, f"La catégorie « {nom} » ne peut pas être supprimée car elle est utilisée.")
         else:
+            JournalAudit.objects.create(utilisateur=request.user, action=JournalAudit.Action.SUPPRESSION, modele="Categorie", objet_id=str(pk_obj), description=f"Catégorie supprimée : {nom}")
             messages.success(request, f"La catégorie « {nom} » a été supprimée.")
-
         return redirect("medicaments:categories")

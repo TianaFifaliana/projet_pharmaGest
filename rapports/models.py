@@ -40,3 +40,32 @@ class JournalAudit(models.Model):
 
     def __str__(self):
         return f"{self.get_action_display()} {self.modele} #{self.objet_id}"
+
+
+class Parametres(models.Model):
+    nom_pharmacie = models.CharField("nom de la pharmacie", max_length=200, default="PharmaGest")
+    adresse = models.TextField("adresse", blank=True)
+    telephone = models.CharField("téléphone", max_length=50, blank=True)
+    email = models.EmailField("email", blank=True)
+    nif = models.CharField("NIF", max_length=50, blank=True)
+    stat = models.CharField("STAT", max_length=50, blank=True)
+    mentions_legales = models.TextField(
+        "mentions légales",
+        blank=True,
+        help_text="Mentions affichées en bas des documents (factures, reçus, rapports).",
+    )
+    date_modification = models.DateTimeField("date de modification", auto_now=True)
+
+    class Meta:
+        verbose_name = "paramètres de la pharmacie"
+        verbose_name_plural = "paramètres de la pharmacie"
+
+    def __str__(self):
+        return self.nom_pharmacie or "Paramètres"
+
+    @classmethod
+    def get_solo(cls):
+        obj = cls.objects.first()
+        if obj is None:
+            obj = cls.objects.create()
+        return obj

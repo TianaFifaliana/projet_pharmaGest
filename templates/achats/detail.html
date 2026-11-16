@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ commande.numero }}{% endblock %}
+{% block page_title %}Commande {{ commande.numero }}{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" href="{% url 'achats:liste' %}"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+        <a class="btn btn-outline-dark" href="{% url 'rapports:pdf_bon_commande' commande.pk %}"><i class="bi bi-download me-1"></i>Bon de commande PDF</a>
+        {% if peut_modifier and perms.achats.change_commandeachat %}
+            <a class="btn btn-primary" href="{% url 'achats:modification' commande.pk %}"><i class="bi bi-pencil me-1"></i>Modifier</a>
+        {% endif %}
+        {% if peut_commander and perms.achats.change_commandeachat %}
+            <form method="post" action="{% url 'achats:action_statut' commande.pk 'commander' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success" onclick="return confirm('Valider cette commande ?');"><i class="bi bi-check2-circle me-1"></i>Valider la commande</button>
+            </form>
+        {% endif %}
+        {% if peut_receptionner and perms.achats.add_receptionachat %}
+            <a class="btn btn-info text-white" href="{% url 'achats:reception' commande.pk %}"><i class="bi bi-box-arrow-in-down me-1"></i>Réceptionner</a>
+        {% endif %}
+        {% if peut_annuler and perms.achats.change_commandeachat %}
+            <form method="post" action="{% url 'achats:action_statut' commande.pk 'annuler' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Annuler cette commande ?');"><i class="bi bi-x-circle me-1"></i>Annuler</button>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Informations</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Fournisseur</dt><dd class="col-sm-7">{{ commande.fournisseur.nom }}</dd>
+                    <dt class="col-sm-5">Statut</dt><dd class="col-sm-7">
+                        {% if commande.statut == 'brouillon' %}<span class="badge text-bg-secondary">{{ commande.get_statut_display }}</span>
+                        {% elif commande.statut == 'commandee' %}<span class="badge text-bg-info">{{ commande.get_statut_display }}</span>
+                        {% elif commande.statut == 'partiellement_receptionnee' %}<span class="badge text-bg-warning">{{ commande.get_statut_display }}</span>
+                        {% elif commande.statut == 'entierement_receptionnee' %}<span class="badge text-bg-success">{{ commande.get_statut_display }}</span>
+                        {% else %}<span class="badge text-bg-danger">{{ commande.get_statut_display }}</span>{% endif %}
+                    </dd>
+                    <dt class="col-sm-5">Auteur</dt><dd class="col-sm-7">{{ commande.auteur }}</dd>
+                    <dt class="col-sm-5">Créée le</dt><dd class="col-sm-7">{{ commande.date_creation|date:"d/m/Y H:i" }}</dd>
+                    <dt class="col-sm-5">Modifiée le</dt><dd class="col-sm-7">{{ commande.date_modification|date:"d/m/Y H:i" }}</dd>
+                </dl>
+                {% if commande.commentaire %}<hr><p class="small mb-0">{{ commande.commentaire|linebreaksbr }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Lignes de commande</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light"><tr><th>Médicament</th><th class="text-end">Qté</th><th class="text-end">PU</th><th class="text-end">Total</th><th class="text-end">Reçue</th><th class="text-end">Restant</th></tr></thead>
+                        <tbody>
+                            {% for ligne in commande.lignes.all %}
+                                <tr>
+                                    <td>{{ ligne.medicament }}</td>
+                                    <td class="text-end">{{ ligne.quantite }}</td>
+                                    <td class="text-end">{{ ligne.prix_unitaire|floatformat:2 }}</td>
+                                    <td class="text-end">{{ ligne.total_ligne|floatformat:2 }}</td>
+                                    <td class="text-end">{{ ligne.quantite_recue }}</td>
+                                    <td class="text-end">{{ ligne.quantite_restante }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="6" class="text-muted">Aucune ligne.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot><tr class="table-light"><th colspan="3" class="text-end">Montant total</th><th class="text-end">{{ commande.montant_total|floatformat:2 }}</th><th colspan="2"></th></tr></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Réceptions</h2>
+        {% if receptions %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light"><tr><th>N°</th><th>Date</th><th>Auteur</th><th>Validée</th><th>Validée par</th><th></th></tr></thead>
+                    <tbody>
+                        {% for r in receptions %}
+                            <tr>
+                                <td class="fw-semibold">{{ r.numero }}</td>
+                                <td>{{ r.date_creation|date:"d/m/Y H:i" }}</td>
+                                <td>{{ r.auteur }}</td>
+                                <td>{% if r.est_validee %}<span class="badge text-bg-success">Oui</span>{% else %}<span class="badge text-bg-secondary">Non</span>{% endif %}</td>
+                                <td>{{ r.validee_par|default:"-" }}</td>
+                                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'achats:reception_detail' r.pk %}">Voir</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">Aucune réception enregistrée.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -136,6 +136,14 @@ class LigneVente(models.Model):
     def total_ligne(self):
         return self.prix_applique * self.quantite
 
+    @property
+    def quantite_retournee(self):
+        return sum((r.quantite for r in self.retours.all()), 0)
+
+    @property
+    def quantite_retournable(self):
+        return max(0, self.quantite - self.quantite_retournee)
+
 
 class Paiement(models.Model):
     class Mode(models.TextChoices):
@@ -196,11 +204,39 @@ class Paiement(models.Model):
 
 
 class RetourVente(models.Model):
+    class TypeRetour(models.TextChoices):
+        RETOUR_LIGNE = "retour_ligne", "Retour de ligne"
+        ANNULATION = "annulation", "Annulation de vente"
+
     vente = models.ForeignKey(
         Vente,
         on_delete=models.PROTECT,
         related_name="retours",
         verbose_name="vente",
+    )
+    ligne_vente = models.ForeignKey(
+        LigneVente,
+        on_delete=models.PROTECT,
+        related_name="retours",
+        verbose_name="ligne de vente",
+        null=True,
+        blank=True,
+    )
+    lot = models.ForeignKey(
+        LotStock,
+        on_delete=models.PROTECT,
+        related_name="retours_vente",
+        verbose_name="lot",
+        null=True,
+        blank=True,
+    )
+    quantite = models.PositiveIntegerField("quantité retournée", default=0)
+    reintegrable = models.BooleanField("réintégrable en stock", default=False)
+    type_retour = models.CharField(
+        "type de retour",
+        max_length=20,
+        choices=TypeRetour.choices,
+        default=TypeRetour.RETOUR_LIGNE,
     )
     montant = models.DecimalField(
         "montant remboursé",
@@ -227,10 +263,16 @@ class RetourVente(models.Model):
                 condition=Q(montant__gte=0),
                 name="retourvente_montant_positif",
             ),
+            models.CheckConstraint(
+                condition=Q(quantite__gte=0),
+                name="retourvente_quantite_positive",
+            ),
         ]
         indexes = [
             models.Index(fields=["vente"]),
+            models.Index(fields=["ligne_vente"]),
         ]
 
     def __str__(self):
-        return f"Retour {self.vente.numero} - {self.montant}"
+        cible = self.ligne_vente_id or self.vente_id
+        return f"Retour {self.vente.numero} ({cible}) - {self.montant}"

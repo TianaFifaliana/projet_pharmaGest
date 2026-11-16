@@ -14,6 +14,10 @@ urlpatterns = [
     path("medicaments/", include("medicaments.urls")),
     path("fournisseurs/", include("fournisseurs.urls")),
     path("clients/", include("clients.urls")),
+    path("achats/", include("achats.urls")),
+    path("stock/", include("stock.urls")),
+    path("ventes/", include("ventes.urls")),
+    path("rapports/", include("rapports.urls")),
 ]
 
 handler403 = "utilisateurs.views.erreur_403"

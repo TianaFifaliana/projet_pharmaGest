@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ reception.numero }}{% endblock %}
+{% block page_title %}Réception {{ reception.numero }}{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" href="{% url 'achats:detail' reception.commande_id %}"><i class="bi bi-arrow-left me-1"></i>Retour commande</a>
+        <a class="btn btn-outline-dark" href="{% url 'rapports:pdf_bon_reception' reception.pk %}"><i class="bi bi-download me-1"></i>Bon de réception PDF</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Commande</dt><dd class="col-sm-9"><a href="{% url 'achats:detail' reception.commande_id %}">{{ reception.commande.numero }}</a> — {{ reception.commande.fournisseur.nom }}</dd>
+            <dt class="col-sm-3">Validée</dt><dd class="col-sm-9">{% if reception.est_validee %}<span class="badge text-bg-success">Oui</span> le {{ reception.date_validation|date:"d/m/Y H:i" }} par {{ reception.validee_par|default:"-" }}{% else %}<span class="badge text-bg-secondary">Non</span>{% endif %}</dd>
+            <dt class="col-sm-3">Auteur</dt><dd class="col-sm-9">{{ reception.auteur }}</dd>
+            <dt class="col-sm-3">Créée le</dt><dd class="col-sm-9">{{ reception.date_creation|date:"d/m/Y H:i" }}</dd>
+        </dl>
+        {% if reception.commentaire %}<hr><p class="mb-0">{{ reception.commentaire|linebreaksbr }}</p>{% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Lignes reçues</h2>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light"><tr><th>Médicament</th><th class="text-end">Quantité</th><th>N° lot</th><th>Péremption</th><th>Lot stock</th></tr></thead>
+                <tbody>
+                    {% for ligne in reception.lignes.all %}
+                        <tr>
+                            <td>{{ ligne.ligne_achat.medicament }}</td>
+                            <td class="text-end">{{ ligne.quantite }}</td>
+                            <td>{{ ligne.numero_lot }}</td>
+                            <td>{{ ligne.date_peremption|date:"d/m/Y" }}</td>
+                            <td>{% if ligne.lot %}#{{ ligne.lot_id }} (dispo: {{ ligne.lot.quantite_disponible }}){% else %}-{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="text-muted">Aucune ligne.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
