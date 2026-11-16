@@ -112,6 +112,11 @@ class Medicament(models.Model):
             libelle = f"{libelle} {self.dosage}"
         return libelle
 
+    @property
+    def a_un_historique(self):
+        """Vrai si le médicament est référencé par du stock ou des achats."""
+        return self.lots.exists() or self.lignes_achat.exists()
+
     def save(self, *args, **kwargs):
         if self.code_barres is not None:
             self.code_barres = self.code_barres.strip() or None

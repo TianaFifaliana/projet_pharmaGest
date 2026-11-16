@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Catégories{% endblock %}
+{% block page_title %}Catégories{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'medicaments:liste' %}">
+            <i class="bi bi-arrow-left me-1"></i>Médicaments
+        </a>
+        {% if perms.medicaments.add_categorie %}
+            <a class="btn btn-success" href="{% url 'medicaments:categorie_creation' %}">
+                <i class="bi bi-plus-lg me-1"></i>Nouvelle catégorie
+            </a>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label" for="q">Recherche</label>
+                <input type="search" class="form-control" id="q" name="q"
+                       value="{{ recherche }}" placeholder="Nom ou description">
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-success">
+                    <i class="bi bi-search me-1"></i>Filtrer
+                </button>
+                <a class="btn btn-outline-secondary" href="{% url 'medicaments:categories' %}">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<p class="small text-muted">
+    {{ total_categories }} catégorie{{ total_categories|pluralize }} au total.
+</p>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Description</th>
+                    <th class="text-center">Médicaments</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for categorie in categories %}
+                    <tr>
+                        <td class="fw-semibold">{{ categorie.nom }}</td>
+                        <td class="text-muted">{{ categorie.description|default:"-"|truncatechars:120 }}</td>
+                        <td class="text-center">
+                            <span class="badge text-bg-light border">{{ categorie.nombre_medicaments }}</span>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            {% if perms.medicaments.change_categorie %}
+                                <a class="btn btn-sm btn-outline-primary"
+                                   href="{% url 'medicaments:categorie_modification' categorie.pk %}"
+                                   title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            {% endif %}
+                            {% if perms.medicaments.delete_categorie %}
+                                {% if categorie.nombre_medicaments %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" disabled
+                                            title="Suppression impossible : catégorie utilisée par {{ categorie.nombre_medicaments }} médicament{{ categorie.nombre_medicaments|pluralize }}">
+                                        <i class="bi bi-lock"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalSuppression{{ categorie.pk }}"
+                                            title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            Aucune catégorie ne correspond aux critères.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if is_paginated %}
+    <nav class="mt-3" aria-label="Pagination des catégories">
+        <ul class="pagination justify-content-center">
+            <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+                <a class="page-link" href="{% if page_obj.has_previous %}{% querystring page=page_obj.previous_page_number %}{% else %}#{% endif %}">Précédent</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+                <a class="page-link" href="{% if page_obj.has_next %}{% querystring page=page_obj.next_page_number %}{% else %}#{% endif %}">Suivant</a>
+            </li>
+        </ul>
+    </nav>
+{% endif %}
+
+{% if perms.medicaments.delete_categorie %}
+    {% for categorie in categories %}
+        {% if not categorie.nombre_medicaments %}
+            <div class="modal fade" id="modalSuppression{{ categorie.pk }}" tabindex="-1"
+                 aria-labelledby="titreModalSuppression{{ categorie.pk }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="titreModalSuppression{{ categorie.pk }}">
+                                Confirmer la suppression
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-2">
+                                Voulez-vous vraiment supprimer la catégorie
+                                <strong>{{ categorie.nom }}</strong> ?
+                            </p>
+                            <p class="small text-muted mb-0">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Cette action est définitive. La catégorie n'est utilisée par aucun médicament.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <form method="post" action="{% url 'medicaments:categorie_suppression' categorie.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-trash me-1"></i>Confirmer
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+{% endblock %}

@@ -11,6 +11,9 @@ urlpatterns = [
     path("", AccueilView.as_view(), name="accueil"),
     path("admin/", admin.site.urls),
     path("utilisateurs/", include("utilisateurs.urls")),
+    path("medicaments/", include("medicaments.urls")),
+    path("fournisseurs/", include("fournisseurs.urls")),
+    path("clients/", include("clients.urls")),
 ]
 
 handler403 = "utilisateurs.views.erreur_403"

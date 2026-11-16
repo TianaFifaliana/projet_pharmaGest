@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+{% block page_title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    {% include "medicaments/_formulaire.html" %}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>{{ bouton }}
+                        </button>
+                        <a class="btn btn-outline-secondary" href="{% url 'medicaments:liste' %}">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted">Photo</h2>
+                <p class="small text-muted mb-2">
+                    Formats acceptés : JPEG, PNG ou WebP. Taille maximale : 2 Mo.
+                </p>
+                {% if not mode_creation and form.instance.photo %}
+                    <p class="small text-muted mb-2">Photo actuelle :</p>
+                    <img src="{{ form.instance.photo.url }}" alt="Photo actuelle"
+                         class="photo-detail">
+                {% endif %}
+            </div>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted">Règles de validation</h2>
+                <ul class="small text-muted ps-3 mb-0">
+                    <li>Le nom commercial est obligatoire.</li>
+                    <li>Le code-barres doit être unique s'il est renseigné.</li>
+                    <li>Les prix d'achat et de vente doivent être positifs.</li>
+                    <li>Le statut permet de réactiver un médicament archivé.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

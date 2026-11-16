@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.nom_complet }}{% endblock %}
+{% block page_title %}{{ client.nom_complet }}{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'clients:liste' %}">
+            <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+        {% if perms.clients.change_client %}
+            <a class="btn btn-primary" href="{% url 'clients:modification' client.pk %}">
+                <i class="bi bi-pencil me-1"></i>Modifier
+            </a>
+            <button type="button" class="btn {% if client.actif %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                    data-bs-toggle="modal" data-bs-target="#modalStatut">
+                {% if client.actif %}
+                    <i class="bi bi-slash-circle me-1"></i>Désactiver
+                {% else %}
+                    <i class="bi bi-check-circle me-1"></i>Activer
+                {% endif %}
+            </button>
+        {% endif %}
+        {% if perms.clients.delete_client %}
+            <button type="button" class="btn btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#modalSuppression">
+                <i class="bi bi-trash me-1"></i>Supprimer
+            </button>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-uppercase text-muted small mb-1">Ventes</p>
+                <p class="display-6 mb-0">{{ nombre_ventes }}</p>
+                <p class="small text-muted mb-0">
+                    {{ nombre_ventes_validees }} validée{{ nombre_ventes_validees|pluralize }}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-uppercase text-muted small mb-1">Montant des ventes</p>
+                <p class="h3 mb-0">{{ montant_ventes|floatformat:2 }}</p>
+                <p class="small text-muted mb-0">Hors ventes annulées</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-uppercase text-muted small mb-1">Statut</p>
+                <p class="h4 mb-0">
+                    {% if client.actif %}
+                        <span class="badge text-bg-success">Actif</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">Inactif</span>
+                    {% endif %}
+                </p>
+                <p class="small text-muted mb-0">Depuis le {{ client.date_creation|date:"d/m/Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Coordonnées</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Nom</dt>
+                    <dd class="col-sm-7">{{ client.nom }}</dd>
+
+                    <dt class="col-sm-5">Prénom</dt>
+                    <dd class="col-sm-7">{{ client.prenom|default:"-" }}</dd>
+
+                    <dt class="col-sm-5">Téléphone</dt>
+                    <dd class="col-sm-7">{{ client.telephone|default:"-" }}</dd>
+
+                    <dt class="col-sm-5">E-mail</dt>
+                    <dd class="col-sm-7">
+                        {% if client.email %}
+                            <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+                        {% else %}-{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-5">Adresse</dt>
+                    <dd class="col-sm-7">{{ client.adresse|default:"-" }}</dd>
+
+                    <dt class="col-sm-5">Créé le</dt>
+                    <dd class="col-sm-7">{{ client.date_creation|date:"d/m/Y H:i" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Historique des ventes</h2>
+                {% if ventes %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>N° vente</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                    <th class="text-end">Montant</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vente in ventes %}
+                                    <tr>
+                                        <td class="fw-semibold">{{ vente.numero }}</td>
+                                        <td>{{ vente.date_creation|date:"d/m/Y" }}</td>
+                                        <td>
+                                            {% if vente.statut == 'brouillon' %}
+                                                <span class="badge text-bg-secondary">{{ vente.get_statut_display }}</span>
+                                            {% elif vente.statut == 'validee' %}
+                                                <span class="badge text-bg-success">{{ vente.get_statut_display }}</span>
+                                            {% else %}
+                                                <span class="badge text-bg-danger">{{ vente.get_statut_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">{{ vente.montant_total|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if ventes_tronquees %}
+                        <p class="small text-muted mt-2 mb-0">
+                            Affichage des {{ ventes|length }} ventes les plus récentes
+                            sur {{ nombre_ventes }}.
+                        </p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">Aucune vente enregistrée pour ce client.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if perms.clients.change_client %}
+    <div class="modal fade" id="modalStatut" tabindex="-1"
+         aria-labelledby="titreModalStatut" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="titreModalStatut">
+                        {% if client.actif %}Désactiver{% else %}Activer{% endif %} le client
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Voulez-vous vraiment {% if client.actif %}désactiver{% else %}activer{% endif %}
+                        <strong>{{ client.nom_complet }}</strong> ?
+                    </p>
+                    {% if client.actif %}
+                        <p class="small text-muted mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            La désactivation n'efface aucun historique : les ventes restent consultables.
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <form method="post" action="{% if client.actif %}{% url 'clients:desactiver' client.pk %}{% else %}{% url 'clients:activer' client.pk %}{% endif %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn {% if client.actif %}btn-warning{% else %}btn-success{% endif %}">
+                            Confirmer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if perms.clients.delete_client %}
+    <div class="modal fade" id="modalSuppression" tabindex="-1"
+         aria-labelledby="titreModalSuppression" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="titreModalSuppression">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Voulez-vous vraiment supprimer le client
+                        <strong>{{ client.nom_complet }}</strong> ?
+                    </p>
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        {% if nombre_ventes %}
+                            Ses {{ nombre_ventes }} vente{{ nombre_ventes|pluralize }} seront conservées
+                            et rattachées aux ventes comptoir (sans client).
+                        {% else %}
+                            Ce client n'a aucune vente : la suppression est définitive.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <form method="post" action="{% url 'clients:suppression' client.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Confirmer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

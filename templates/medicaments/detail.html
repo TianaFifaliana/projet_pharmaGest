@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ medicament }}{% endblock %}
+{% block page_title %}{{ medicament }}{% endblock %}
+
+{% block page_actions %}
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'medicaments:liste' %}">
+            <i class="bi bi-arrow-left me-1"></i>Retour
+        </a>
+        {% if perms.medicaments.change_medicament %}
+            <a class="btn btn-primary" href="{% url 'medicaments:modification' medicament.pk %}">
+                <i class="bi bi-pencil me-1"></i>Modifier
+            </a>
+        {% endif %}
+        {% if perms.medicaments.delete_medicament %}
+            <button type="button" class="btn btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#modalSuppression">
+                <i class="bi bi-trash me-1"></i>Supprimer
+            </button>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body text-center">
+                {% if medicament.photo %}
+                    <img src="{{ medicament.photo.url }}" alt="Photo de {{ medicament }}"
+                         class="photo-detail mb-3">
+                {% else %}
+                    <div class="photo-detail photo-vide d-flex align-items-center justify-content-center mb-3">
+                        <i class="bi bi-capsule text-muted display-4"></i>
+                    </div>
+                {% endif %}
+                {% if medicament.statut == 'actif' %}
+                    <span class="badge text-bg-success">Actif</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">Archivé</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted">Historique</h2>
+                <ul class="list-unstyled small mb-0">
+                    <li class="d-flex justify-content-between py-1">
+                        <span>Lots de stock</span><strong>{{ nombre_lots }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between py-1">
+                        <span>Lignes d'achat</span><strong>{{ nombre_lignes_achat }}</strong>
+                    </li>
+                </ul>
+                {% if a_un_historique %}
+                    <p class="small text-muted mt-3 mb-0">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Ce médicament possède un historique : il sera archivé plutôt que supprimé.
+                    </p>
+                {% else %}
+                    <p class="small text-muted mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Aucun historique : ce médicament peut être supprimé définitivement.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Informations</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Nom commercial</dt>
+                    <dd class="col-sm-8">{{ medicament.nom_commercial }}</dd>
+
+                    <dt class="col-sm-4">Nom générique</dt>
+                    <dd class="col-sm-8">{{ medicament.nom_generique|default:"-" }}</dd>
+
+                    <dt class="col-sm-4">Code-barres</dt>
+                    <dd class="col-sm-8">{{ medicament.code_barres|default:"-" }}</dd>
+
+                    <dt class="col-sm-4">Catégorie</dt>
+                    <dd class="col-sm-8">{{ medicament.categorie.nom }}</dd>
+
+                    <dt class="col-sm-4">Forme</dt>
+                    <dd class="col-sm-8">{{ medicament.get_forme_display }}</dd>
+
+                    <dt class="col-sm-4">Dosage</dt>
+                    <dd class="col-sm-8">{{ medicament.dosage|default:"-" }}</dd>
+
+                    <dt class="col-sm-4">Laboratoire</dt>
+                    <dd class="col-sm-8">{{ medicament.laboratoire|default:"-" }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Prix et seuils</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Prix d'achat</dt>
+                    <dd class="col-sm-8">{{ medicament.prix_achat|floatformat:2 }}</dd>
+
+                    <dt class="col-sm-4">Prix de vente</dt>
+                    <dd class="col-sm-8">{{ medicament.prix_vente|floatformat:2 }}</dd>
+
+                    <dt class="col-sm-4">Seuil d'alerte</dt>
+                    <dd class="col-sm-8">{{ medicament.seuil_alerte }}</dd>
+
+                    <dt class="col-sm-4">Date de création</dt>
+                    <dd class="col-sm-8">{{ medicament.date_creation|date:"d/m/Y H:i" }}</dd>
+
+                    <dt class="col-sm-4">Dernière modification</dt>
+                    <dd class="col-sm-8">{{ medicament.date_modification|date:"d/m/Y H:i" }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Lots de stock</h2>
+                {% if lots %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>N° de lot</th>
+                                    <th>Péremption</th>
+                                    <th class="text-end">Disponible</th>
+                                    <th>État</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lot in lots %}
+                                    <tr>
+                                        <td>{{ lot.numero_lot }}</td>
+                                        <td>{{ lot.date_peremption|date:"d/m/Y" }}</td>
+                                        <td class="text-end">{{ lot.quantite_disponible }}</td>
+                                        <td>
+                                            {% if lot.bloque %}
+                                                <span class="badge text-bg-danger">Bloqué</span>
+                                            {% elif lot.est_perime %}
+                                                <span class="badge text-bg-warning">Périmé</span>
+                                            {% else %}
+                                                <span class="badge text-bg-success">Disponible</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if nombre_lots > lots|length %}
+                        <p class="small text-muted mt-2 mb-0">
+                            Affichage des {{ lots|length }} premiers lots sur {{ nombre_lots }}.
+                        </p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">Aucun lot de stock enregistré.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if perms.medicaments.delete_medicament %}
+    <div class="modal fade" id="modalSuppression" tabindex="-1"
+         aria-labelledby="titreModalSuppression" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="titreModalSuppression">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        Voulez-vous vraiment supprimer le médicament
+                        <strong>{{ medicament }}</strong> ?
+                    </p>
+                    {% if a_un_historique %}
+                        <p class="small text-muted mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Ce médicament possède un historique : il sera <strong>archivé</strong>
+                            au lieu d'être supprimé afin de préserver la traçabilité.
+                        </p>
+                    {% else %}
+                        <p class="small text-muted mb-0">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Aucun historique n'est associé : la suppression sera définitive.
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <form method="post" action="{% url 'medicaments:suppression' medicament.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Confirmer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

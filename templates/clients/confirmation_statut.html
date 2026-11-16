@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{% if activation %}Activer{% else %}Désactiver{% endif %} un client{% endblock %}
+{% block page_title %}{% if activation %}Activer un client{% else %}Désactiver un client{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p>
+                    Voulez-vous vraiment {% if activation %}activer{% else %}désactiver{% endif %}
+                    le client <strong>{{ client.nom_complet }}</strong> ?
+                </p>
+                {% if not activation %}
+                    <p class="small text-muted">
+                        La désactivation n'efface aucun historique : les ventes restent consultables.
+                    </p>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn {% if activation %}btn-success{% else %}btn-warning{% endif %}">
+                        Confirmer
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{% url 'clients:detail' client.pk %}">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

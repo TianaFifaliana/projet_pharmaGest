@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer un client{% endblock %}
+{% block page_title %}Supprimer un client{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p>
+                    Voulez-vous vraiment supprimer le client
+                    <strong>{{ client.nom_complet }}</strong> ?
+                </p>
+                {% if nombre_ventes %}
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Ses {{ nombre_ventes }} vente{{ nombre_ventes|pluralize }} seront conservées
+                        et rattachées aux ventes comptoir (sans client). L'historique n'est pas perdu.
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Ce client n'a aucune vente : la suppression est définitive.
+                    </div>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Confirmer</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'clients:detail' client.pk %}">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

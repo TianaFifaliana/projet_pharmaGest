@@ -1,0 +1,23 @@
+{% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for erreur in form.non_field_errors %}<div>{{ erreur }}</div>{% endfor %}
+    </div>
+{% endif %}
+
+{% for field in form %}
+    {% if field.field.widget.input_type == 'checkbox' %}
+        <div class="mb-3 form-check">
+            {{ field }}
+            <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
+            {% for erreur in field.errors %}<div class="invalid-feedback d-block">{{ erreur }}</div>{% endfor %}
+        </div>
+    {% else %}
+        <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
+            {% for erreur in field.errors %}<div class="invalid-feedback d-block">{{ erreur }}</div>{% endfor %}
+        </div>
+    {% endif %}
+{% endfor %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titre }}{% endblock %}
+{% block page_title %}{{ titre }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% include "medicaments/_formulaire.html" %}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>{{ bouton }}
+                        </button>
+                        <a class="btn btn-outline-secondary" href="{% url 'medicaments:categories' %}">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted">À propos des catégories</h2>
+                <ul class="small text-muted ps-3 mb-0">
+                    <li>Le nom de la catégorie est unique.</li>
+                    <li>Une catégorie utilisée par des médicaments ne peut pas être supprimée.</li>
+                    <li>Réaffectez les médicaments à une autre catégorie avant suppression.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

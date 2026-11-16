@@ -65,8 +65,11 @@
                         {% if user.is_superuser or perms.medicaments or perms.stock %}
                             <div class="sidebar-heading">Catalogue</div>
                             {% if user.is_superuser or perms.medicaments %}
-                                <a class="nav-link{% if request.path == '/medicaments/' %} active{% endif %}" href="/medicaments/">
+                                <a class="nav-link{% if request.path == '/medicaments/' %} active{% endif %}" href="{% url 'medicaments:liste' %}">
                                     <i class="bi bi-capsule me-2"></i>Médicaments
+                                </a>
+                                <a class="nav-link{% if request.path == '/medicaments/categories/' %} active{% endif %}" href="{% url 'medicaments:categories' %}">
+                                    <i class="bi bi-tags me-2"></i>Catégories
                                 </a>
                             {% endif %}
                             {% if user.is_superuser or perms.stock %}
@@ -93,12 +96,12 @@
                         {% if user.is_superuser or perms.clients or perms.fournisseurs %}
                             <div class="sidebar-heading">Tiers</div>
                             {% if user.is_superuser or perms.clients %}
-                                <a class="nav-link{% if request.path == '/clients/' %} active{% endif %}" href="/clients/">
+                                <a class="nav-link{% if request.path == '/clients/' %} active{% endif %}" href="{% url 'clients:liste' %}">
                                     <i class="bi bi-people me-2"></i>Clients
                                 </a>
                             {% endif %}
                             {% if user.is_superuser or perms.fournisseurs %}
-                                <a class="nav-link{% if request.path == '/fournisseurs/' %} active{% endif %}" href="/fournisseurs/">
+                                <a class="nav-link{% if request.path == '/fournisseurs/' %} active{% endif %}" href="{% url 'fournisseurs:liste' %}">
                                     <i class="bi bi-truck me-2"></i>Fournisseurs
                                 </a>
                             {% endif %}

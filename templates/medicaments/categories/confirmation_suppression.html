@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer une catégorie{% endblock %}
+{% block page_title %}Supprimer une catégorie{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p>
+                    Voulez-vous vraiment supprimer la catégorie
+                    <strong>{{ categorie.nom }}</strong> ?
+                </p>
+                {% if nombre_medicaments %}
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-lock me-1"></i>
+                        Suppression impossible : cette catégorie est utilisée par
+                        {{ nombre_medicaments }} médicament{{ nombre_medicaments|pluralize }}.
+                        Réaffectez-les à une autre catégorie avant de réessayer.
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Cette action est définitive.
+                    </div>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"
+                            {% if nombre_medicaments %}disabled{% endif %}>Confirmer</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'medicaments:categories' %}">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

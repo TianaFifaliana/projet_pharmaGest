@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer un fournisseur{% endblock %}
+{% block page_title %}Supprimer un fournisseur{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p>
+                    Voulez-vous vraiment supprimer le fournisseur
+                    <strong>{{ fournisseur.nom }}</strong> ?
+                </p>
+                {% if nombre_commandes %}
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-lock me-1"></i>
+                        Suppression impossible : ce fournisseur possède
+                        {{ nombre_commandes }} commande{{ nombre_commandes|pluralize }}.
+                        Désactivez-le pour préserver l'historique des achats.
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Ce fournisseur n'a aucune commande : la suppression est définitive.
+                    </div>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"
+                            {% if nombre_commandes %}disabled{% endif %}>Confirmer</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'fournisseurs:detail' fournisseur.pk %}">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

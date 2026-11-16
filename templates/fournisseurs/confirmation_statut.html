@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{% if activation %}Activer{% else %}Désactiver{% endif %} un fournisseur{% endblock %}
+{% block page_title %}{% if activation %}Activer un fournisseur{% else %}Désactiver un fournisseur{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <p>
+                    Voulez-vous vraiment {% if activation %}activer{% else %}désactiver{% endif %}
+                    le fournisseur <strong>{{ fournisseur.nom }}</strong> ?
+                </p>
+                {% if not activation %}
+                    <p class="small text-muted">
+                        La désactivation n'efface aucun historique : les commandes et réceptions
+                        restent consultables.
+                    </p>
+                {% endif %}
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn {% if activation %}btn-success{% else %}btn-warning{% endif %}">
+                        Confirmer
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{% url 'fournisseurs:detail' fournisseur.pk %}">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
